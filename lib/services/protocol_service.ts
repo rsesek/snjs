@@ -603,7 +603,6 @@ export class SNProtocolService extends PureService implements EncryptionDelegate
     data: BackupFile,
     password?: string
   ) {
-    const keyParams = data.keyParams || data.auth_params;
     const rawItems = data.items;
     const encryptedPayloads = rawItems.map((rawItem) => {
       return CreateSourcedPayloadFromObject(
@@ -612,7 +611,9 @@ export class SNProtocolService extends PureService implements EncryptionDelegate
       );
     });
     let decryptedPayloads;
-    if (keyParams) {
+    let keyParams;
+    if (keyParams = data.keyParams || data.auth_params) {
+      keyParams = this.createKeyParams(keyParams);
       const key = await this.computeRootKey(
         password!,
         keyParams
