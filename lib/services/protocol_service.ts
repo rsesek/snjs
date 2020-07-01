@@ -611,9 +611,9 @@ export class SNProtocolService extends PureService implements EncryptionDelegate
       );
     });
     let decryptedPayloads;
-    let keyParams;
-    if (keyParams = data.keyParams || data.auth_params) {
-      keyParams = this.createKeyParams(keyParams);
+    const keyParamsData = data.keyParams || data.auth_params;
+    if (keyParamsData) {
+      const keyParams = this.createKeyParams(keyParamsData);
       const key = await this.computeRootKey(
         password!,
         keyParams
