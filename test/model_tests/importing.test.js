@@ -271,7 +271,7 @@ describe('importing', () => {
       expect(this.application.findItem(note.uuid).deleted).to.be.false;
     });
 
-    it('should import data from encrypted payload', async function () {
+    it('should import data from 003 encrypted payload', async function () {
       const passwordForDecrypting = '1234567890';
       const encryptedPayload = {
         uuid: 'e3acaf70-3f57-4366-84d2-f3605b35a10f',
