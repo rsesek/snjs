@@ -272,27 +272,43 @@ describe('importing', () => {
     });
 
     it('should import data from 003 encrypted payload', async function () {
-      const passwordForDecrypting = '1234567890';
-      const encryptedPayload = {
-        uuid: 'e3acaf70-3f57-4366-84d2-f3605b35a10f',
-        content_type: 'Note',
-        created_at: '2020-07-01T03:56:29.511Z',
-        updated_at: '2020-07-01T03:58:32.029Z',
-        enc_item_key: '003:d53aeaf89fdc0b2d31694674bacf75d35ee15978ff8c98402c8598730e1fec8d:e3acaf70-3f57-4366-84d2-f3605b35a10f:13d7a02a11341649c441f06f4de9a089:uFYSNCmJOFT5Im4Yek5dVCE9vMWXsbfVweyuFL17bXKKQ9GexTTQh+IA6HEvF2CSXgbVQqafpnPPSvg503jfqMkTXTPb69R7WLsX/xWkoR/PbGZFxdlyhIJZfiOIOp4vxlI5U4CGrcYE7qHc0PfOfUi0rJry02E4NfN+tyFmmmMQLnadQ9Qn9GiMffP62Qry:eyJwd19ub25jZSI6ImM1ZGJmZmZjMzEyNDE1YzA3NWQyMDM0MjlkNmY3OGZjMjU0NjY4NDc0NjJhMmNiYjA0ZTM5Y2MxNDM0ZTAwMmYiLCJwd19jb3N0IjoxMTAwMDAsImlkZW50aWZpZXIiOiJ0ZXN0aW5nQHRlc3Qtc24ub3JnIiwidmVyc2lvbiI6IjAwMyJ9',
-        content: '003:d01f296b7e0d2408c4b2a319e9ad36acaf74d4a6c136a15a430b9fba96e512c3:e3acaf70-3f57-4366-84d2-f3605b35a10f:c15a224754e405e4bdabd7973ea212d7:/TA9r+xdWP4UHML/cps0LcRbk4j99eTQz+nFOoboeWHI+a/Iz+qssUnvwWL5xcUtu6P9D6CZ+TBw4O7xIeqD2kuaDDSSJk+x204quVWuJLZzbTcBk2vGftWUAdhbe0Ngrs90u2Znqjkl7VuWq6cRfHzIbRs3fMrKQqOY/NLJzGIJ51jlZjosaj+Kaid3L/jc6wzVd+OXAgqxh/++9SiaC6/DdtUbwKPbxGJLmxPcSLQQYgB0ZKoYJNU+fYFnRke6E1v0oHnKqqYALJ1DnyPZ9V0jWqP3k8Kz8jLjw2iDi/s=:eyJwd19ub25jZSI6ImM1ZGJmZmZjMzEyNDE1YzA3NWQyMDM0MjlkNmY3OGZjMjU0NjY4NDc0NjJhMmNiYjA0ZTM5Y2MxNDM0ZTAwMmYiLCJwd19jb3N0IjoxMTAwMDAsImlkZW50aWZpZXIiOiJ0ZXN0aW5nQHRlc3Qtc24ub3JnIiwidmVyc2lvbiI6IjAwMyJ9',
-        auth_hash: null
-      };
+      const oldVersion = ProtocolVersion.V003;
+      await Factory.registerOldUser({
+        application: this.application,
+        email: this.email,
+        password: this.password,
+        version: oldVersion
+      });
+
+      const noteItem = await this.application.itemManager.createItem(
+        ContentType.Note,
+        {
+          title: 'Encrypted note',
+          text: 'On protocol version 003.'
+        }
+      );
+
+      const payload = CreateSourcedPayloadFromObject(
+        noteItem.payload,
+        PayloadSource.FileImport
+      );
+      const encryptedPayload = await this.application.protocolService.payloadByEncryptingPayload(
+        payload,
+        EncryptionIntent.FilePreferEncrypted
+      );
+
+      const rootkeyParams = await this.application.protocolService.getRootKeyParams();
+      const keyParams = rootkeyParams.getPortableValue();
+
+      await this.application.deinit();
+      this.application = await Factory.createInitAppWithRandNamespace();
+
       const result = await this.application.importData(
         {
-          keyParams: {
-            'pw_nonce': 'c5dbfffc312415c075d203429d6f78fc25466847462a2cbb04e39cc1434e002f',
-            'pw_cost': 110000,
-            'identifier': 'testing@test-sn.org',
-            'version': '003'
-          },
+          keyParams: keyParams,
           items: [encryptedPayload]
         },
-        passwordForDecrypting,
+        this.password,
         true,
       );
       expect(result).to.not.be.undefined;
@@ -301,6 +317,53 @@ describe('importing', () => {
 
       const decryptedNote = result.affectedItems[0];
       expect(decryptedNote.title).to.be.eq('Encrypted note');
-      expect(decryptedNote.text).to.be.eq('This is a simple note.');
+      expect(decryptedNote.text).to.be.eq('On protocol version 003.');
+    });
+
+    it('should import data from 004 encrypted payload', async function () {
+      await Factory.registerUserToApplication({
+        application: this.application,
+        email: this.email,
+        password: this.password,
+      });
+
+      const noteItem = await this.application.itemManager.createItem(
+        ContentType.Note,
+        {
+          title: 'Encrypted note',
+          text: 'On protocol version 004.'
+        }
+      );
+
+      const payload = CreateSourcedPayloadFromObject(
+        noteItem.payload,
+        PayloadSource.FileImport
+      );
+      const encryptedPayload = await this.application.protocolService.payloadByEncryptingPayload(
+        payload,
+        EncryptionIntent.FilePreferEncrypted
+      );
+
+      const rootkeyParams = await this.application.protocolService.getRootKeyParams();
+      const keyParams = rootkeyParams.getPortableValue();
+
+      await this.application.deinit();
+      this.application = await Factory.createInitAppWithRandNamespace();
+
+      const result = await this.application.importData(
+        {
+          keyParams,
+          items: [encryptedPayload]
+        },
+        this.password,
+        true,
+      );
+      expect(result).to.not.be.undefined;
+      expect(result.affectedItems.length).to.be.eq(1);
+      expect(result.errorCount).to.be.eq(0);
+
+      const decryptedNote = result.affectedItems[0];
+      expect(decryptedNote.title).to.be.eq('Encrypted note');
+      expect(decryptedNote.text).to.be.eq('On protocol version 004.');
     });
 });
