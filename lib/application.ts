@@ -1,6 +1,6 @@
 import { CollectionSort, SortDirection } from '@Protocol/collection/item_collection';
 import { Uuids } from '@Models/functions';
-import { PayloadOverride } from './protocol/payloads/generator';
+import { PayloadOverride, RawPayload } from './protocol/payloads/generator';
 import { ApplicationStage } from '@Lib/stages';
 import { MigrationServices } from './migrations/types';
 import { UuidString } from './types';
@@ -51,6 +51,7 @@ import {
   InsufficientPasswordMessage
 } from './services/api/messages';
 import { MINIMUM_PASSWORD_LENGTH } from './services/api/session_manager';
+import { ProtocolVersion } from './protocol';
 
 
 /** How often to automatically sync, in milliseconds */
@@ -739,13 +740,31 @@ export class SNApplication {
     password?: string,
     awaitSync = false
   ) {
-    const decryptedPayloads = await this.protocolService!.payloadsByDecryptingBackupFile(
-      data,
+    // Processing ItemsKeys
+    const itemsKeys = data.items.filter((item: RawPayload) => item.content_type === ContentType.ItemsKey);
+    const decryptedItemsKeysPayloads = await this.protocolService!.payloadsByDecryptingBackupFile(
+      { ...data, items: itemsKeys },
       password
     );
-    const validPayloads = decryptedPayloads.filter((payload) => {
+    const validItemsKeysPayloads = decryptedItemsKeysPayloads.filter((payload: PurePayload) => {
       return !payload.errorDecrypting;
-    }).map((payload) => {
+    });
+    const affectedItemsKeysUuids = await this.modelManager!.importPayloads(validItemsKeysPayloads);
+    const promiseForItemsKeys = this.sync();
+    if (awaitSync) {
+      await promiseForItemsKeys;
+    }
+    // Everything else
+    const shouldPassKey = !(data.keyParams && data.keyParams.version === ProtocolVersion.V004);
+    const restOfItems = data.items.filter((item: RawPayload) => item.content_type !== ContentType.ItemsKey);
+    const decryptedRestOfItemsPayloads = await this.protocolService!.payloadsByDecryptingBackupFile(
+      { ...data, items: restOfItems },
+      password,
+      shouldPassKey
+    );
+    const validRestOfItemsPayloads = decryptedRestOfItemsPayloads.filter((payload: PurePayload) => {
+      return !payload.errorDecrypting;
+    }).map((payload: PurePayload) => {
       /* Don't want to activate any components during import process in
        * case of exceptions breaking up the import proccess */
       if (payload.content_type === ContentType.Component && payload.safeContent.active) {
@@ -762,15 +781,16 @@ export class SNApplication {
         return payload;
       }
     })
-    const affectedUuids = await this.modelManager!.importPayloads(validPayloads);
-    const promise = this.sync();
+    const affectedRestOfItemsUuids = await this.modelManager!.importPayloads(validRestOfItemsPayloads)
+    const affectedUuids = [ ...affectedItemsKeysUuids, ...affectedRestOfItemsUuids ];
+    const promiseForRestOfItems = this.sync();
     if (awaitSync) {
-      await promise;
+      await promiseForRestOfItems;
     }
     const affectedItems = this.getAll(affectedUuids) as SNItem[];
     return {
-      affectedItems: affectedItems,
-      errorCount: decryptedPayloads.length - validPayloads.length
+      affectedItems,
+      errorCount: (decryptedItemsKeysPayloads.length - validItemsKeysPayloads.length) + (decryptedRestOfItemsPayloads.length - validRestOfItemsPayloads.length)
     };
   }
 

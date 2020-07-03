@@ -601,7 +601,8 @@ export class SNProtocolService extends PureService implements EncryptionDelegate
    */
   public async payloadsByDecryptingBackupFile(
     data: BackupFile,
-    password?: string
+    password?: string,
+    passKey: boolean = true
   ) {
     const rawItems = data.items;
     const encryptedPayloads = rawItems.map((rawItem) => {
@@ -620,7 +621,7 @@ export class SNProtocolService extends PureService implements EncryptionDelegate
       );
       decryptedPayloads = await this.payloadsByDecryptingPayloads(
         encryptedPayloads,
-        key
+        passKey ? key : undefined
       );
     } else {
       decryptedPayloads = encryptedPayloads;
