@@ -303,16 +303,17 @@ describe('importing', () => {
       await this.application.deinit();
       this.application = await Factory.createInitAppWithRandNamespace();
 
+      const itemsToImport = [encryptedPayload];
       const result = await this.application.importData(
         {
           keyParams: keyParams,
-          items: [encryptedPayload]
+          items: itemsToImport
         },
         this.password,
         true,
       );
       expect(result).to.not.be.undefined;
-      expect(result.affectedItems.length).to.be.eq(1);
+      expect(result.affectedItems.length).to.be.eq(itemsToImport.length);
       expect(result.errorCount).to.be.eq(0);
 
       const decryptedNote = result.affectedItems[0];
@@ -343,6 +344,7 @@ describe('importing', () => {
         payload,
         EncryptionIntent.FilePreferEncrypted
       );
+      const itemsKey = this.application.protocolService.itemsKeyForPayload(encryptedPayload);
 
       const rootkeyParams = await this.application.protocolService.getRootKeyParams();
       const keyParams = rootkeyParams.getPortableValue();
@@ -350,16 +352,17 @@ describe('importing', () => {
       await this.application.deinit();
       this.application = await Factory.createInitAppWithRandNamespace();
 
+      const itemsToImport = [encryptedPayload, itemsKey];
       const result = await this.application.importData(
         {
           keyParams,
-          items: [encryptedPayload]
+          items: itemsToImport
         },
         this.password,
         true,
       );
       expect(result).to.not.be.undefined;
-      expect(result.affectedItems.length).to.be.eq(1);
+      expect(result.affectedItems.length).to.be.eq(itemsToImport.length);
       expect(result.errorCount).to.be.eq(0);
 
       const decryptedNote = result.affectedItems[0];
