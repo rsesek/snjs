@@ -365,7 +365,7 @@ describe('importing', () => {
       expect(result.affectedItems.length).to.be.eq(itemsToImport.length);
       expect(result.errorCount).to.be.eq(0);
 
-      const decryptedNote = result.affectedItems[0];
+      const decryptedNote = result.affectedItems[1];
       expect(decryptedNote.title).to.be.eq('Encrypted note');
       expect(decryptedNote.text).to.be.eq('On protocol version 004.');
     });
