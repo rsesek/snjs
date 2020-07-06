@@ -746,14 +746,7 @@ export class SNApplication {
       { ...data, items: itemsKeys },
       password
     );
-    const validItemsKeysPayloads = decryptedItemsKeysPayloads.filter((payload: PurePayload) => {
-      return !payload.errorDecrypting;
-    });
-    const affectedItemsKeysUuids = await this.modelManager!.importPayloads(validItemsKeysPayloads);
-    const promiseForItemsKeys = this.sync();
-    if (awaitSync) {
-      await promiseForItemsKeys;
-    }
+    const affectedItemsKeysUuids = await this.importValidPayloads(decryptedItemsKeysPayloads, awaitSync);
     // Everything else
     const shouldPassKey = !(data.keyParams && data.keyParams.version === ProtocolVersion.V004);
     const restOfItems = data.items.filter((item: RawPayload) => item.content_type !== ContentType.ItemsKey);
@@ -762,7 +755,17 @@ export class SNApplication {
       password,
       shouldPassKey
     );
-    const validRestOfItemsPayloads = decryptedRestOfItemsPayloads.filter((payload: PurePayload) => {
+    const affectedRestOfItemsUuids = await this.importValidPayloads(decryptedRestOfItemsPayloads, awaitSync);
+    const affectedUuids = [ ...affectedItemsKeysUuids, ...affectedRestOfItemsUuids ];
+    const affectedItems = this.getAll(affectedUuids) as SNItem[];
+    return {
+      affectedItems,
+      errorCount: (decryptedItemsKeysPayloads.length - affectedItemsKeysUuids.length) + (decryptedRestOfItemsPayloads.length - affectedRestOfItemsUuids.length)
+    };
+  }
+
+  private async importValidPayloads(decryptedPayloads: PurePayload[], awaitSync: boolean) {
+    const validPayloads = decryptedPayloads.filter((payload: PurePayload) => {
       return !payload.errorDecrypting;
     }).map((payload: PurePayload) => {
       /* Don't want to activate any components during import process in
@@ -780,18 +783,13 @@ export class SNApplication {
       } else {
         return payload;
       }
-    })
-    const affectedRestOfItemsUuids = await this.modelManager!.importPayloads(validRestOfItemsPayloads)
-    const affectedUuids = [ ...affectedItemsKeysUuids, ...affectedRestOfItemsUuids ];
-    const promiseForRestOfItems = this.sync();
+    });
+    const affectedUuids = await this.modelManager!.importPayloads(validPayloads);
+    const promise = this.sync();
     if (awaitSync) {
-      await promiseForRestOfItems;
+      await promise;
     }
-    const affectedItems = this.getAll(affectedUuids) as SNItem[];
-    return {
-      affectedItems,
-      errorCount: (decryptedItemsKeysPayloads.length - validItemsKeysPayloads.length) + (decryptedRestOfItemsPayloads.length - validRestOfItemsPayloads.length)
-    };
+    return affectedUuids;
   }
 
   /**
