@@ -19,10 +19,12 @@ export class ItemHistory {
   constructor(entries?: ItemHistoryEntry[]) {
     /** Deserialize the entries into entry objects. */
     if (entries) {
-      for (const entry of entries) {
+      entries.slice(0).sort((a, b) => {
+        return a.payload.updated_at! < b.payload.updated_at! ? 1 : -1;
+      }).map((entry) => {
         entry.setPreviousEntry(this.getLastEntry());
         this.entries.push(entry);
-      }
+      });
     }
   }
 

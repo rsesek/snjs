@@ -1427,6 +1427,7 @@ export class SNApplication {
     this.historyManager = new SNHistoryManager(
       this.itemManager!,
       this.storageService!,
+      this.apiService!,
       [ContentType.Note],
       this.deviceInterface!.timeout
     );

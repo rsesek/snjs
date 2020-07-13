@@ -5,26 +5,31 @@ import { SNItem } from '@Models/core/item';
 import { ContentType } from '@Models/content_types';
 import { PureService } from '@Lib/services/pure_service';
 import { HistorySession } from '@Services/history/history_session';
+import { HistoryServer } from '@Services/history/history_server';
 import { PayloadSource } from '@Payloads/sources';
 import { StorageKey } from '@Lib/storage_keys';
 import { isNullOrUndefined, concatArrays } from '@Lib/utils';
+import { SNApiService } from '@Services/api/api_service';
+import { PurePayload } from '@Lib/protocol/payloads';
 
 const PERSIST_TIMEOUT = 2000;
 
 /**
- * The history manager is presently responsible for transient 'session history',
+ * The history manager is responsible for transient 'session history',
  * which include keeping track of changes made in the current application session.
  * These change logs (unless otherwise configured) are ephemeral and do not persist
  * past application restart.
- * In the future the history manager will also be responsible for remote server history.
+ * History manager is also responsible for remote server history.
  */
 export class SNHistoryManager extends PureService {
 
   private itemManager?: ItemManager
   private storageService?: SNStorageService
+  private apiService?: SNApiService
   private contentTypes: ContentType[] = []
   private timeout: any
   private historySession?: HistorySession
+  private historyServer?: HistoryServer
   private removeChangeObserver: any
   private persistable = false
   public autoOptimize = false
@@ -33,12 +38,14 @@ export class SNHistoryManager extends PureService {
   constructor(
     itemManager: ItemManager,
     storageService: SNStorageService,
+    apiService: SNApiService,
     contentTypes: ContentType[],
     timeout: any
   ) {
     super();
     this.itemManager = itemManager;
     this.storageService = storageService;
+    this.apiService = apiService;
     this.contentTypes = contentTypes;
     this.timeout = timeout;
   }
@@ -46,6 +53,7 @@ export class SNHistoryManager extends PureService {
   public deinit() {
     this.itemManager = undefined;
     this.storageService = undefined;
+    this.apiService = undefined;
     this.contentTypes.length = 0;
     this.historySession = undefined;
     this.timeout = null;
@@ -88,7 +96,7 @@ export class SNHistoryManager extends PureService {
         for (const item of items) {
           try {
             if (!item.deleted && !item.errorDecrypting) {
-              this.addHistoryEntryForItem(item);
+              this.addHistoryEntryForItem(item, PayloadSource.SessionHistory);
             }
           } catch (e) {
             console.error('Unable to add item history entry:', e);
@@ -120,9 +128,21 @@ export class SNHistoryManager extends PureService {
     this.historySession!.setItemRevisionThreshold(threshold);
   }
 
-  async addHistoryEntryForItem(item: SNItem) {
-    const payload = CreateSourcedPayloadFromObject(item, PayloadSource.SessionHistory)
-    const entry = this.historySession!.addEntryForPayload(payload);
+  addEntryForPayload(payload: PurePayload) {
+    switch (payload.source) {
+      case PayloadSource.ServerHistory:
+        return this.historyServer!.addEntryForPayload(payload);
+      case PayloadSource.SessionHistory:
+        return this.historySession!.addEntryForPayload(payload);
+    }
+  }
+
+  async addHistoryEntryForItem(item: SNItem, source: PayloadSource) {
+    const payload = CreateSourcedPayloadFromObject(item, source)
+    const entry = this.addEntryForPayload(payload);
+    if (source === PayloadSource.ServerHistory) {
+      return;
+    }
     if (this.autoOptimize) {
       this.historySession!.optimizeHistoryForItem(item.uuid);
     }
@@ -141,8 +161,10 @@ export class SNHistoryManager extends PureService {
     }
   }
 
-  historyForItem(item: SNItem) {
-    return this.historySession!.historyForItem(item.uuid);
+  async historyForItem(item: SNItem) {
+    await this.fetchHistoryFromServer(item.uuid);
+    const sessionHistory = this.historySession!.historyForItem(item.uuid);
+    return sessionHistory;
   }
 
   async clearHistoryForItem(item: SNItem) {
@@ -189,5 +211,10 @@ export class SNHistoryManager extends PureService {
         false
       );
     }
+  }
+
+  async fetchHistoryFromServer(itemUuid: string) {
+    const itemRevisionsResponse = await this.apiService!.getItemRevisions(itemUuid);
+    this.historyServer = HistoryServer.FromResponse(itemRevisionsResponse);
   }
 }

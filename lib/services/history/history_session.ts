@@ -1,7 +1,7 @@
 import { AnyRecord } from '@Lib/types';
 import { SNItem } from '@Models/core/item';
-import { PurePayload } from '@Payloads/pure_payload';
 import { ItemHistory } from '@Services/history/item_history';
+import { History, HistoryContent } from '@Services/history/history';
 
 /** The amount of revisions which above, call for an optimization. */
 const DEFAULT_ITEM_REVISIONS_THRESHOLD = 60;
@@ -16,27 +16,17 @@ const DEFAULT_ITEM_REVISIONS_THRESHOLD = 60;
  * `ItemHistory` (or subclasses thereof) entries.
  */
 
-type HistorySessionContent = {
-  itemUUIDToItemHistoryMapping: Record<string, ItemHistory>
-}
+export class HistorySession extends History {
 
-export class HistorySession {
-
-  private content?: HistorySessionContent
   private itemRevisionThreshold = DEFAULT_ITEM_REVISIONS_THRESHOLD
 
-  constructor(content?: HistorySessionContent) {
-    this.content = content;
-    if(!this.content) {
-      this.content = {
-        itemUUIDToItemHistoryMapping: {}
-      };
-    }
+  constructor(content?: HistoryContent) {
+    super(content);
   }
 
-  static FromJson(historySessionJson?: AnyRecord) {
-    if(historySessionJson) {
-      const content = historySessionJson.content;
+  static FromJson(HistoryJson?: AnyRecord) {
+    if (HistoryJson) {
+      const content = HistoryJson.content;
       const uuids = Object.keys(content.itemUUIDToItemHistoryMapping);
       uuids.forEach((itemUUID) => {
         const rawItemHistory = content.itemUUIDToItemHistoryMapping[itemUUID];
@@ -47,20 +37,6 @@ export class HistorySession {
     } else {
       return new HistorySession();
     }
-  }
-
-  addEntryForPayload(payload: PurePayload) {
-    const itemHistory = this.historyForItem(payload.uuid!);
-    return itemHistory.addHistoryEntryForItem(payload);
-  }
-
-  historyForItem(uuid: string) {
-    let history = this.content!.itemUUIDToItemHistoryMapping[uuid];
-    if(!history) {
-      history = new ItemHistory();
-      this.content!.itemUUIDToItemHistoryMapping[uuid] = history;
-    }
-    return history;
   }
 
   clearItemHistory(item: SNItem) {
@@ -85,7 +61,7 @@ export class HistorySession {
      * those worth keeping.
      */
     const itemHistory = this.historyForItem(uuid);
-    if(itemHistory.entries.length > this.itemRevisionThreshold) {
+    if (itemHistory.entries.length > this.itemRevisionThreshold) {
       itemHistory.optimize();
     }
   }
