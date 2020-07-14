@@ -161,10 +161,18 @@ export class SNHistoryManager extends PureService {
     }
   }
 
-  async historyForItem(item: SNItem) {
-    await this.fetchHistoryFromServer(item.uuid);
-    const sessionHistory = this.historySession!.historyForItem(item.uuid);
-    return sessionHistory;
+  sessionHistoryForItem(item: SNItem) {
+    return this.historySession!.historyForItem(item.uuid);
+  }
+
+  async fetchHistoryFromServer(item: SNItem) {
+    const itemRevisionsResponse = await this.apiService!.getItemRevisions(item.uuid);
+    this.historyServer = HistoryServer.FromResponse(itemRevisionsResponse);
+  }
+
+  async serverHistoryForItem(item: SNItem) {
+    await this.fetchHistoryFromServer(item);
+    return this.historyServer!.historyForItem(item.uuid);
   }
 
   async clearHistoryForItem(item: SNItem) {
@@ -211,10 +219,5 @@ export class SNHistoryManager extends PureService {
         false
       );
     }
-  }
-
-  async fetchHistoryFromServer(itemUuid: string) {
-    const itemRevisionsResponse = await this.apiService!.getItemRevisions(itemUuid);
-    this.historyServer = HistoryServer.FromResponse(itemRevisionsResponse);
   }
 }
