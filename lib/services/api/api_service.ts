@@ -322,13 +322,16 @@ export class SNApiService extends PureService {
     }
     const path = REQUEST_PATH_ITEM_REVISIONS.replace(/:item_id/, itemId);
     const url = await this.path(path);
-    const response = await this.httpService!.getAbsolute(url)
-      .catch((errorResponse: HttpResponse) => {
-        return this.errorResponseWithFallbackMessage(
-          errorResponse,
-          messages.API_MESSAGE_GENERIC_SYNC_FAIL
-        );
-      });
+    const response = await this.httpService!.getAbsolute(
+      url,
+      undefined,
+      this.session!.accessToken
+    ).catch((errorResponse: HttpResponse) => {
+      return this.errorResponseWithFallbackMessage(
+        errorResponse,
+        messages.API_MESSAGE_GENERIC_SYNC_FAIL
+      );
+    });
     return response;
   }
 
@@ -338,13 +341,16 @@ export class SNApiService extends PureService {
     }
     const path = REQUEST_PATH_ITEM_REVISION.replace(/:item_id/, itemId).replace(/:id/, revisionId);
     const url = await this.path(path);
-    const response = await this.httpService!.getAbsolute(url)
-      .catch((errorResponse: HttpResponse) => {
-        return this.errorResponseWithFallbackMessage(
-          errorResponse,
-          messages.API_MESSAGE_GENERIC_SYNC_FAIL
-        );
-      });
+    const response = await this.httpService!.getAbsolute(
+      url,
+      undefined,
+      this.session!.accessToken
+    ).catch((errorResponse: HttpResponse) => {
+      return this.errorResponseWithFallbackMessage(
+        errorResponse,
+        messages.API_MESSAGE_GENERIC_SYNC_FAIL
+      );
+    });
     return response;
   }
 }
