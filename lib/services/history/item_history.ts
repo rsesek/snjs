@@ -31,7 +31,7 @@ export class ItemHistory {
   static FromJson(entryJson: ItemHistoryJson) {
     const entries = entryJson.entries.map((rawHistoryEntry: any) => {
       return CreateHistoryEntryForPayload(rawHistoryEntry.payload);
-    })
+    });
     return new ItemHistory(entries);
   }
 

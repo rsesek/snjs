@@ -2,6 +2,7 @@ import { PayloadField } from './../../protocol/payloads/fields';
 import { PurePayload } from '@Payloads/pure_payload';
 import { NoteHistoryEntry } from './note_history_entry';
 import { ContentType } from '@Models/content_types';
+
 export function CreateHistoryEntryForPayload(payload: PurePayload) {
   const mapping = {
     [ContentType.Note]: NoteHistoryEntry
