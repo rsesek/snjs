@@ -6,6 +6,7 @@ import { PureService } from '../pure_service';
 import { PayloadSource } from '../../protocol/payloads/sources';
 import { SNApiService } from '../api/api_service';
 import { PurePayload } from '../../protocol/payloads';
+import { SNProtocolService } from '../protocol_service';
 /**
  * The history manager is responsible for transient 'session history',
  * which include keeping track of changes made in the current application session.
@@ -17,6 +18,7 @@ export declare class SNHistoryManager extends PureService {
     private itemManager?;
     private storageService?;
     private apiService?;
+    private protocolService?;
     private contentTypes;
     private timeout;
     private historySession?;
@@ -25,7 +27,7 @@ export declare class SNHistoryManager extends PureService {
     private persistable;
     autoOptimize: boolean;
     private saveTimeout;
-    constructor(itemManager: ItemManager, storageService: SNStorageService, apiService: SNApiService, contentTypes: ContentType[], timeout: any);
+    constructor(itemManager: ItemManager, storageService: SNStorageService, apiService: SNApiService, protocolService: SNProtocolService, contentTypes: ContentType[], timeout: any);
     deinit(): void;
     initializeFromDisk(): Promise<void>;
     addChangeObserver(): void;

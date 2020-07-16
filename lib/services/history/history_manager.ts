@@ -11,6 +11,7 @@ import { StorageKey } from '@Lib/storage_keys';
 import { isNullOrUndefined, concatArrays } from '@Lib/utils';
 import { SNApiService } from '@Services/api/api_service';
 import { PurePayload } from '@Lib/protocol/payloads';
+import { SNProtocolService } from '../protocol_service';
 
 const PERSIST_TIMEOUT = 2000;
 
@@ -26,6 +27,7 @@ export class SNHistoryManager extends PureService {
   private itemManager?: ItemManager
   private storageService?: SNStorageService
   private apiService?: SNApiService
+  private protocolService?: SNProtocolService
   private contentTypes: ContentType[] = []
   private timeout: any
   private historySession?: HistorySession
@@ -39,6 +41,7 @@ export class SNHistoryManager extends PureService {
     itemManager: ItemManager,
     storageService: SNStorageService,
     apiService: SNApiService,
+    protocolService: SNProtocolService,
     contentTypes: ContentType[],
     timeout: any
   ) {
@@ -46,6 +49,7 @@ export class SNHistoryManager extends PureService {
     this.itemManager = itemManager;
     this.storageService = storageService;
     this.apiService = apiService;
+    this.protocolService = protocolService;
     this.contentTypes = contentTypes;
     this.timeout = timeout;
   }
@@ -54,6 +58,7 @@ export class SNHistoryManager extends PureService {
     this.itemManager = undefined;
     this.storageService = undefined;
     this.apiService = undefined;
+    this.protocolService = undefined;
     this.contentTypes.length = 0;
     this.historySession = undefined;
     this.timeout = null;
@@ -140,9 +145,6 @@ export class SNHistoryManager extends PureService {
   async addHistoryEntryForItem(item: SNItem, source: PayloadSource) {
     const payload = CreateSourcedPayloadFromObject(item, source)
     const entry = this.addEntryForPayload(payload);
-    if (source === PayloadSource.ServerHistory) {
-      return;
-    }
     if (this.autoOptimize) {
       this.historySession!.optimizeHistoryForItem(item.uuid);
     }
@@ -167,7 +169,7 @@ export class SNHistoryManager extends PureService {
 
   async fetchHistoryFromServer(item: SNItem) {
     const itemRevisionsResponse = await this.apiService!.getItemRevisions(item.uuid);
-    this.historyServer = HistoryServer.FromResponse(itemRevisionsResponse);
+    this.historyServer = await HistoryServer.FromResponse(this.protocolService!, item.uuid, itemRevisionsResponse);
   }
 
   async serverHistoryForItem(item: SNItem) {

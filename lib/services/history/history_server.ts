@@ -2,7 +2,9 @@ import { AnyRecord } from '@Lib/types';
 import { ItemHistory } from '@Services/history/item_history';
 import { History, HistoryContent } from '@Services/history/history';
 import { HttpResponse } from '../api/http_service';
-import { PayloadContent } from '@Lib/protocol/payloads/generator';
+import { PayloadContent, RawPayload, CreateSourcedPayloadFromObject } from '@Lib/protocol/payloads/generator';
+import { PayloadSource, PurePayload } from '@Lib/protocol/payloads';
+import { SNProtocolService } from '../protocol_service';
 
 export class HistoryServer extends History {
 
@@ -10,20 +12,20 @@ export class HistoryServer extends History {
     super(content);
   }
 
-  static FromResponse(response?: HttpResponse) {
+  static async FromResponse(protocolService: SNProtocolService, itemUuid: string, response?: HttpResponse) {
     if (response) {
-      const content = response.map((entry: PayloadContent) => {
-        return {
-          [entry.uuid]: entry
-        }
+      delete response.error;
+      delete response.status;
+      const historyServer = new HistoryServer();
+      Object.entries(response).forEach(async ([key, value]) => {
+        const payload = CreateSourcedPayloadFromObject(value, PayloadSource.ServerHistory, {
+          ...value,
+          uuid: itemUuid
+        });
+        const decryptedPayload = await protocolService.payloadByDecryptingPayload(payload);
+        historyServer.addEntryForPayload(decryptedPayload);
       });
-      const uuids = Object.keys(content);
-      uuids.forEach((itemUUID) => {
-        const rawItemHistory = content.itemUUIDToItemHistoryMapping[itemUUID];
-        content.itemUUIDToItemHistoryMapping[itemUUID] =
-          ItemHistory.FromJson(rawItemHistory);
-      });
-      return new HistoryServer(content);
+      return historyServer;
     } else {
       return new HistoryServer();
     }

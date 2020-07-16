@@ -1428,6 +1428,7 @@ export class SNApplication {
       this.itemManager!,
       this.storageService!,
       this.apiService!,
+      this.protocolService!,
       [ContentType.Note],
       this.deviceInterface!.timeout
     );
