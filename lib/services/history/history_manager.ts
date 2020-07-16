@@ -5,7 +5,7 @@ import { SNItem } from '@Models/core/item';
 import { ContentType } from '@Models/content_types';
 import { PureService } from '@Lib/services/pure_service';
 import { HistorySession } from '@Services/history/history_session';
-import { HistoryServer } from '@Services/history/history_server';
+import { ServerHistoryRevision } from '@Lib/services/history/server_history_revision';
 import { PayloadSource } from '@Payloads/sources';
 import { StorageKey } from '@Lib/storage_keys';
 import { isNullOrUndefined, concatArrays } from '@Lib/utils';
@@ -31,7 +31,7 @@ export class SNHistoryManager extends PureService {
   private contentTypes: ContentType[] = []
   private timeout: any
   private historySession?: HistorySession
-  private historyServer?: HistoryServer
+  private historyServer?: ServerHistoryRevision
   private removeChangeObserver: any
   private persistable = false
   public autoOptimize = false
@@ -169,7 +169,7 @@ export class SNHistoryManager extends PureService {
 
   async fetchHistoryFromServer(item: SNItem) {
     const itemRevisionsResponse = await this.apiService!.getItemRevisions(item.uuid);
-    this.historyServer = await HistoryServer.FromResponse(this.protocolService!, item.uuid, itemRevisionsResponse);
+    this.historyServer = await ServerHistoryRevision.FromResponse(this.protocolService!, item.uuid, itemRevisionsResponse);
   }
 
   async serverHistoryForItem(item: SNItem) {

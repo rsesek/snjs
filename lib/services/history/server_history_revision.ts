@@ -1,12 +1,10 @@
-import { AnyRecord } from '@Lib/types';
-import { ItemHistory } from '@Services/history/item_history';
 import { History, HistoryContent } from '@Services/history/history';
 import { HttpResponse } from '../api/http_service';
-import { PayloadContent, RawPayload, CreateSourcedPayloadFromObject } from '@Lib/protocol/payloads/generator';
-import { PayloadSource, PurePayload } from '@Lib/protocol/payloads';
+import { CreateSourcedPayloadFromObject } from '@Lib/protocol/payloads/generator';
+import { PayloadSource } from '@Lib/protocol/payloads';
 import { SNProtocolService } from '../protocol_service';
 
-export class HistoryServer extends History {
+export class ServerHistoryRevision extends History {
 
   constructor(content?: HistoryContent) {
     super(content);
@@ -16,7 +14,7 @@ export class HistoryServer extends History {
     if (response) {
       delete response.error;
       delete response.status;
-      const historyServer = new HistoryServer();
+      const historyServer = new ServerHistoryRevision();
       Object.entries(response).forEach(async ([key, value]) => {
         const payload = CreateSourcedPayloadFromObject(value, PayloadSource.ServerHistory, {
           ...value,
@@ -27,7 +25,7 @@ export class HistoryServer extends History {
       });
       return historyServer;
     } else {
-      return new HistoryServer();
+      return new ServerHistoryRevision();
     }
   }
 }
