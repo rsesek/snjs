@@ -1,10 +1,10 @@
-import { History, HistoryContent } from '@Services/history/history';
+import { BaseHistory, HistoryContent } from '@Lib/services/history/base_history';
 import { HttpResponse } from '../api/http_service';
-import { CreateSourcedPayloadFromObject } from '@Lib/protocol/payloads/generator';
+import { CreateSourcedPayloadFromObject, RawPayload } from '@Lib/protocol/payloads/generator';
 import { PayloadSource } from '@Lib/protocol/payloads';
 import { SNProtocolService } from '../protocol_service';
 
-export class ServerHistoryRevision extends History {
+export class ServerHistoryRevision extends BaseHistory {
 
   constructor(content?: HistoryContent) {
     super(content);
@@ -15,9 +15,13 @@ export class ServerHistoryRevision extends History {
       delete response.error;
       delete response.status;
       const historyServer = new ServerHistoryRevision();
-      Object.entries(response).forEach(async ([key, value]) => {
-        const payload = CreateSourcedPayloadFromObject(value, PayloadSource.ServerHistory, {
-          ...value,
+      let revisions: RawPayload[] = [];
+      Object.entries(response).forEach(([key, value]) => revisions.push(value));
+      revisions.sort((a, b) => {
+        return a.updated_at! < b.updated_at! ? -1 : 1;
+      }).map(async (revision) => {
+        const payload = CreateSourcedPayloadFromObject(revision, PayloadSource.ServerHistory, {
+          ...revision,
           uuid: itemUuid
         });
         const decryptedPayload = await protocolService.payloadByDecryptingPayload(payload);

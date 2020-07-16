@@ -5,7 +5,7 @@ export type HistoryContent = {
   itemUUIDToItemHistoryMapping: Record<string, ItemHistory>
 }
 
-export abstract class History {
+export abstract class BaseHistory {
 
   protected content?: HistoryContent
 

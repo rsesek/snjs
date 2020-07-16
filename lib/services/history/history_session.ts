@@ -1,7 +1,7 @@
 import { AnyRecord } from '@Lib/types';
 import { SNItem } from '@Models/core/item';
 import { ItemHistory } from '@Services/history/item_history';
-import { History, HistoryContent } from '@Services/history/history';
+import { BaseHistory, HistoryContent } from '@Lib/services/history/base_history';
 
 /** The amount of revisions which above, call for an optimization. */
 const DEFAULT_ITEM_REVISIONS_THRESHOLD = 60;
@@ -16,7 +16,7 @@ const DEFAULT_ITEM_REVISIONS_THRESHOLD = 60;
  * `ItemHistory` (or subclasses thereof) entries.
  */
 
-export class HistorySession extends History {
+export class HistorySession extends BaseHistory {
 
   private itemRevisionThreshold = DEFAULT_ITEM_REVISIONS_THRESHOLD
 
